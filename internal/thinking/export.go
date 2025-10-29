@@ -1,4 +1,4 @@
-package main
+package thinking
 
 import (
 	"encoding/json"
@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// exportToMarkdown exports a session to markdown format
-func exportToMarkdown(session *ThinkingSession, includeBranches bool) string {
+// ExportToMarkdown exports a session to markdown format.
+func ExportToMarkdown(session *ThinkingSession, includeBranches bool) string {
 	var sb strings.Builder
 
 	sb.WriteString("# Sequential Thinking Session\n\n")
@@ -87,8 +87,8 @@ func exportToMarkdown(session *ThinkingSession, includeBranches bool) string {
 	return sb.String()
 }
 
-// exportToJSON exports a session to JSON format
-func exportToJSON(session *ThinkingSession, includeBranches bool) string {
+// ExportToJSON exports a session to JSON format.
+func ExportToJSON(session *ThinkingSession, includeBranches bool) string {
 	exportData := map[string]any{
 		"id":               session.ID,
 		"problem":          session.Problem,
@@ -115,8 +115,8 @@ func exportToJSON(session *ThinkingSession, includeBranches bool) string {
 	return string(jsonBytes)
 }
 
-// exportToText exports a session to plain text format
-func exportToText(session *ThinkingSession, includeBranches bool) string {
+// ExportToText exports a session to plain text format.
+func ExportToText(session *ThinkingSession, includeBranches bool) string {
 	var sb strings.Builder
 
 	sb.WriteString("SEQUENTIAL THINKING SESSION\n")

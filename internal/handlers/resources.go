@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"context"
@@ -7,10 +7,12 @@ import (
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/bpradana/sequentialthinking/internal/thinking"
 )
 
 // Resource handler: individual session
-func createSessionResourceHandler(store *MemoryStore) mcp.ResourceHandler {
+func createSessionResourceHandler(store *thinking.MemoryStore) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		// Extract session ID from URI: thinking://session/{session_id}
 		uri := req.Params.URI
@@ -44,7 +46,7 @@ func createSessionResourceHandler(store *MemoryStore) mcp.ResourceHandler {
 }
 
 // Resource handler: session list
-func createSessionListResourceHandler(store *MemoryStore) mcp.ResourceHandler {
+func createSessionListResourceHandler(store *thinking.MemoryStore) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		sessions := store.ListSessions()
 
@@ -84,7 +86,7 @@ func createSessionListResourceHandler(store *MemoryStore) mcp.ResourceHandler {
 }
 
 // Resource handler: templates
-func createTemplateResourceHandler(store *MemoryStore) mcp.ResourceHandler {
+func createTemplateResourceHandler(store *thinking.MemoryStore) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		// Extract template type from URI: thinking://template/{template_type}
 		uri := req.Params.URI
@@ -117,7 +119,7 @@ func createTemplateResourceHandler(store *MemoryStore) mcp.ResourceHandler {
 }
 
 // getTemplate returns a thinking template by type
-func getTemplate(templateType string) *Template {
+func getTemplate(templateType string) *thinking.Template {
 	return templates[templateType]
 }
 

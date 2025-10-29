@@ -4,18 +4,19 @@ A Model Context Protocol (MCP) server that helps break down complex problems int
 
 ## Features
 
-### 🛠️ Tools (10 total)
+### 🛠️ Tools (11 total)
 
 1. **start_thinking** - Initiate a new thinking session
-2. **add_step** - Add reasoning steps with different types (analysis, hypothesis, verification, conclusion)
-3. **review_thinking** - Get complete thinking chain with quality assessment
-4. **branch_thinking** - Create alternative reasoning paths
-5. **merge_insights** - Combine insights from multiple branches
-6. **validate_logic** - Check reasoning for logical fallacies
-7. **export_session** - Export sessions to markdown, JSON, or text
-8. **list_sessions** - List all thinking sessions with filtering
-9. **delete_session** - Remove sessions
-10. **get_metrics** - Analytics on thinking patterns and quality
+2. **add_step** - Add reasoning steps with different types (analysis, hypothesis, verification, conclusion) to the main path or any branch
+3. **update_step** - Modify the content, type, or metadata of an existing step
+4. **review_thinking** - Get complete thinking chain with quality assessment
+5. **branch_thinking** - Create alternative reasoning paths
+6. **merge_insights** - Combine insights from multiple branches
+7. **validate_logic** - Check reasoning for logical fallacies
+8. **export_session** - Export sessions to markdown, JSON, or text
+9. **list_sessions** - List all thinking sessions with filtering
+10. **delete_session** - Remove sessions
+11. **get_metrics** - Analytics on thinking patterns and quality
 
 ### 📚 Resources
 
@@ -43,6 +44,7 @@ A Model Context Protocol (MCP) server that helps break down complex problems int
 - **Pattern Detection**: Identifies common thinking patterns
 - **Logical Validation**: Detects fallacies and weak reasoning
 - **Branching**: Explore multiple solution approaches
+- **Step Editing**: Update existing reasoning without starting over
 - **Metrics & Analytics**: Track thinking effectiveness over time
 - **Multiple Export Formats**: Markdown, JSON, and plain text
 - **Completion Support**: Auto-complete session IDs and prompts

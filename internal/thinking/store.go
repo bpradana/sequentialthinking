@@ -1,9 +1,10 @@
-package main
+package thinking
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,10 +23,12 @@ func NewMemoryStore() *MemoryStore {
 }
 
 // generateID generates a random session ID
-func generateID() string {
+func generateID() (string, error) {
 	b := make([]byte, 16)
-	rand.Read(b)
-	return hex.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("failed to generate id: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 // CreateSession creates a new thinking session
@@ -33,8 +36,13 @@ func (s *MemoryStore) CreateSession(problem string, context map[string]any, tags
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	id, err := generateID()
+	if err != nil {
+		return nil, err
+	}
+
 	session := &ThinkingSession{
-		ID:              generateID(),
+		ID:              id,
 		Problem:         problem,
 		Context:         context,
 		Steps:           make([]*ThinkingStep, 0),
@@ -61,7 +69,7 @@ func (s *MemoryStore) GetSession(id string) (*ThinkingSession, error) {
 	if !exists {
 		return nil, fmt.Errorf("session not found: %s", id)
 	}
-	return session, nil
+	return cloneSession(session), nil
 }
 
 // AddStep adds a step to a session
@@ -72,6 +80,10 @@ func (s *MemoryStore) AddStep(sessionID string, content string, stepType StepTyp
 	session, exists := s.sessions[sessionID]
 	if !exists {
 		return nil, fmt.Errorf("session not found: %s", sessionID)
+	}
+
+	if !stepType.IsValid() {
+		return nil, fmt.Errorf("invalid step type: %q. Allowed values: %s", stepType, strings.Join(AllowedStepTypeStrings(), ", "))
 	}
 
 	stepNumber := len(session.Steps) + 1
@@ -99,6 +111,49 @@ func (s *MemoryStore) AddStep(sessionID string, content string, stepType StepTyp
 	return step, nil
 }
 
+// UpdateStep updates an existing step's content, type, or metadata
+func (s *MemoryStore) UpdateStep(sessionID string, stepNumber int, content *string, stepType *StepType, metadata map[string]any) (*ThinkingStep, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	session, exists := s.sessions[sessionID]
+	if !exists {
+		return nil, fmt.Errorf("session not found: %s", sessionID)
+	}
+
+	if stepNumber < 1 || stepNumber > len(session.Steps) {
+		return nil, fmt.Errorf("invalid step number: %d", stepNumber)
+	}
+
+	step := session.Steps[stepNumber-1]
+
+	if content != nil {
+		step.Content = *content
+	}
+
+	if stepType != nil {
+		if !(*stepType).IsValid() {
+			return nil, fmt.Errorf("invalid step type: %q. Allowed values: %s", *stepType, strings.Join(AllowedStepTypeStrings(), ", "))
+		}
+		step.Type = *stepType
+	}
+
+	if metadata != nil {
+		step.Metadata = make(map[string]any, len(metadata))
+		for k, v := range metadata {
+			step.Metadata[k] = v
+		}
+	}
+
+	now := time.Now()
+	step.Timestamp = now
+	session.LastModified = now
+	session.CurrentStep = stepNumber
+	session.QualityScore = calculateQualityScore(session)
+
+	return step, nil
+}
+
 // CreateBranch creates a new branch from a specific step
 func (s *MemoryStore) CreateBranch(sessionID string, fromStep int, alternativeDesc string) (*Branch, error) {
 	s.mu.Lock()
@@ -113,8 +168,13 @@ func (s *MemoryStore) CreateBranch(sessionID string, fromStep int, alternativeDe
 		return nil, fmt.Errorf("invalid step number: %d", fromStep)
 	}
 
+	id, err := generateID()
+	if err != nil {
+		return nil, err
+	}
+
 	branch := &Branch{
-		ID:              generateID(),
+		ID:              id,
 		FromStep:        fromStep,
 		Steps:           make([]*ThinkingStep, 0),
 		Created:         time.Now(),
@@ -128,7 +188,7 @@ func (s *MemoryStore) CreateBranch(sessionID string, fromStep int, alternativeDe
 }
 
 // AddStepToBranch adds a step to a specific branch
-func (s *MemoryStore) AddStepToBranch(sessionID, branchID string, content string, stepType StepType) (*ThinkingStep, error) {
+func (s *MemoryStore) AddStepToBranch(sessionID, branchID string, content string, stepType StepType, parentStep *int, metadata map[string]any) (*ThinkingStep, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -142,13 +202,24 @@ func (s *MemoryStore) AddStepToBranch(sessionID, branchID string, content string
 		return nil, fmt.Errorf("branch not found: %s", branchID)
 	}
 
+	if !stepType.IsValid() {
+		return nil, fmt.Errorf("invalid step type: %q. Allowed values: %s", stepType, strings.Join(AllowedStepTypeStrings(), ", "))
+	}
+
 	stepNumber := len(branch.Steps) + 1
 	step := &ThinkingStep{
 		Number:      stepNumber,
 		Type:        stepType,
 		Content:     content,
 		Timestamp:   time.Now(),
+		ParentStep:  parentStep,
+		Metadata:    metadata,
 		Connections: make([]int, 0),
+	}
+
+	if parentStep != nil && *parentStep > 0 && *parentStep <= len(branch.Steps) {
+		step.Connections = append(step.Connections, *parentStep)
+		branch.Steps[*parentStep-1].Connections = append(branch.Steps[*parentStep-1].Connections, stepNumber)
 	}
 
 	branch.Steps = append(branch.Steps, step)
@@ -164,7 +235,7 @@ func (s *MemoryStore) ListSessions() []*ThinkingSession {
 
 	sessions := make([]*ThinkingSession, 0, len(s.sessions))
 	for _, session := range s.sessions {
-		sessions = append(sessions, session)
+		sessions = append(sessions, cloneSession(session))
 	}
 	return sessions
 }
@@ -198,6 +269,76 @@ func (s *MemoryStore) UpdateSessionStatus(id, status string) error {
 }
 
 // Helper functions
+
+func cloneSession(session *ThinkingSession) *ThinkingSession {
+	if session == nil {
+		return nil
+	}
+
+	clone := *session
+
+	if session.Context != nil {
+		clone.Context = make(map[string]any, len(session.Context))
+		for k, v := range session.Context {
+			clone.Context[k] = v
+		}
+	}
+
+	if session.Steps != nil {
+		clone.Steps = make([]*ThinkingStep, len(session.Steps))
+		for i, step := range session.Steps {
+			clone.Steps[i] = cloneStep(step)
+		}
+	}
+
+	if session.Branches != nil {
+		clone.Branches = make(map[string]*Branch, len(session.Branches))
+		for id, branch := range session.Branches {
+			clone.Branches[id] = cloneBranch(branch)
+		}
+	}
+
+	if session.Tags != nil {
+		clone.Tags = append([]string(nil), session.Tags...)
+	}
+
+	return &clone
+}
+
+func cloneBranch(branch *Branch) *Branch {
+	if branch == nil {
+		return nil
+	}
+
+	clone := *branch
+	if branch.Steps != nil {
+		clone.Steps = make([]*ThinkingStep, len(branch.Steps))
+		for i, step := range branch.Steps {
+			clone.Steps[i] = cloneStep(step)
+		}
+	}
+	return &clone
+}
+
+func cloneStep(step *ThinkingStep) *ThinkingStep {
+	if step == nil {
+		return nil
+	}
+
+	clone := *step
+	if step.ParentStep != nil {
+		parent := *step.ParentStep
+		clone.ParentStep = &parent
+	}
+	if step.Metadata != nil {
+		clone.Metadata = make(map[string]any, len(step.Metadata))
+		for k, v := range step.Metadata {
+			clone.Metadata[k] = v
+		}
+	}
+	clone.Connections = append([]int{}, step.Connections...)
+	return &clone
+}
 
 func generateInitialAnalysis(problem string) string {
 	return fmt.Sprintf("Initial analysis of problem: '%s'\n\nThis problem requires systematic breakdown. Key aspects to consider:\n1. Understanding the core question\n2. Identifying relevant factors\n3. Evaluating potential approaches\n4. Considering constraints and assumptions", problem)

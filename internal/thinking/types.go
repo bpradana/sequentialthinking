@@ -1,4 +1,4 @@
-package main
+package thinking
 
 import (
 	"time"
@@ -13,6 +13,36 @@ const (
 	StepVerification StepType = "verification"
 	StepConclusion   StepType = "conclusion"
 )
+
+var (
+	stepTypeValues = []StepType{
+		StepAnalysis,
+		StepHypothesis,
+		StepVerification,
+		StepConclusion,
+	}
+	stepTypeSet = map[StepType]struct{}{
+		StepAnalysis:     {},
+		StepHypothesis:   {},
+		StepVerification: {},
+		StepConclusion:   {},
+	}
+)
+
+// IsValid reports whether the step type is one of the supported values.
+func (t StepType) IsValid() bool {
+	_, ok := stepTypeSet[t]
+	return ok
+}
+
+// AllowedStepTypeStrings returns the list of supported step types as strings.
+func AllowedStepTypeStrings() []string {
+	values := make([]string, len(stepTypeValues))
+	for i, v := range stepTypeValues {
+		values[i] = string(v)
+	}
+	return values
+}
 
 // ThinkingStep represents a single step in the reasoning process
 type ThinkingStep struct {
@@ -109,17 +139,39 @@ type StartThinkingOutput struct {
 
 type AddStepInput struct {
 	SessionID   string         `json:"session_id" jsonschema:"The session to add to"`
+	BranchID    string         `json:"branch_id,omitempty" jsonschema:"Branch identifier if adding to a branch"`
 	StepContent string         `json:"step_content" jsonschema:"The reasoning for this step"`
-	StepType    StepType       `json:"step_type" jsonschema:"Type of reasoning step"`
+	StepType    StepType       `json:"step_type" jsonschema:"Type of reasoning step,enum=analysis,enum=hypothesis,enum=verification,enum=conclusion"`
 	ParentStep  *int           `json:"parent_step,omitempty" jsonschema:"Parent step number if building on previous step"`
 	Metadata    map[string]any `json:"metadata,omitempty" jsonschema:"Additional metadata for the step"`
 }
 
 type AddStepOutput struct {
 	StepNumber         int      `json:"step_number" jsonschema:"The number of the added step"`
+	BranchID           string   `json:"branch_id,omitempty" jsonschema:"Branch identifier when the step belongs to a branch"`
 	CurrentProgress    string   `json:"current_progress" jsonschema:"Summary of thinking so far"`
 	SuggestedNextSteps []string `json:"suggested_next_steps" jsonschema:"Potential next steps"`
 	QualityScore       float64  `json:"quality_score" jsonschema:"Current reasoning quality score"`
+}
+
+type UpdateStepInput struct {
+	SessionID   string         `json:"session_id" jsonschema:"The session containing the step"`
+	StepNumber  int            `json:"step_number" jsonschema:"The step number to update"`
+	StepContent *string        `json:"step_content,omitempty" jsonschema:"Updated reasoning content"`
+	StepType    *StepType      `json:"step_type,omitempty" jsonschema:"Updated step type"`
+	Metadata    map[string]any `json:"metadata,omitempty" jsonschema:"Replacement metadata for the step"`
+}
+
+type UpdateStepOutput struct {
+	StepNumber         int           `json:"step_number" jsonschema:"The number of the updated step"`
+	UpdatedStep        *ThinkingStep `json:"updated_step" jsonschema:"The updated step details"`
+	CurrentProgress    string        `json:"current_progress" jsonschema:"Summary of thinking so far"`
+	SuggestedNextSteps []string      `json:"suggested_next_steps" jsonschema:"Potential next steps"`
+	QualityScore       float64       `json:"quality_score" jsonschema:"Current reasoning quality score"`
+	LastModified       time.Time     `json:"last_modified" jsonschema:"Timestamp when the session was last modified"`
+	MetadataChanged    bool          `json:"metadata_changed" jsonschema:"Whether metadata was replaced"`
+	TypeChanged        bool          `json:"type_changed" jsonschema:"Whether the step type was updated"`
+	ContentChanged     bool          `json:"content_changed" jsonschema:"Whether the step content was updated"`
 }
 
 type ReviewThinkingInput struct {
@@ -162,8 +214,8 @@ type MergeInsightsOutput struct {
 
 type ValidateLogicInput struct {
 	SessionID  string `json:"session_id" jsonschema:"The session to validate"`
-	RangeStart *int   `json:"range_start" jsonschema:"Range start of step"`
-	RangeEnd   *int   `json:"reange_end" jsonschema:"Range end of step"`
+	RangeStart *int   `json:"range_start,omitempty" jsonschema:"Range start of step"`
+	RangeEnd   *int   `json:"range_end,omitempty" jsonschema:"Range end of step"`
 }
 
 type ValidateLogicOutput struct {

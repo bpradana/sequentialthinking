@@ -1,6 +1,8 @@
-package main
+package handlers
 
-var templates = map[string]*Template{
+import "github.com/bpradana/sequentialthinking/internal/thinking"
+
+var templates = map[string]*thinking.Template{
 	"scientific-method": {
 		Type:        "scientific-method",
 		Name:        "Scientific Method",
