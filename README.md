@@ -1,296 +1,137 @@
 # Sequential Thinking MCP Server
 
-A Model Context Protocol (MCP) server that helps break down complex problems into step-by-step reasoning processes, making AI reasoning more transparent and structured.
+Sequential Thinking is a Model Context Protocol (MCP) server that operationalizes deliberate reasoning. It lets MCP clients create structured thinking sessions, capture sequential steps (analysis → hypothesis → verification → conclusion), branch into alternative lines of thought, and export or audit the full chain of reasoning.
 
-## Features
+## Overview
 
-### 🛠️ Tools (11 total)
+- Written in Go 1.24 with the MCP Go SDK as its only direct dependency.
+- Ships an in-memory session store, branch management, logical validation, and reasoning-quality heuristics.
+- Provides eleven MCP tools, resource endpoints for sessions and templates, and three reasoning prompts.
+- Supports stdio (default) and streamable HTTP transports, plus a minimal scratch-based Docker image.
+- Backed by unit tests across handlers and an end-to-end MCP integration test.
 
-1. **start_thinking** - Initiate a new thinking session
-2. **add_step** - Add reasoning steps with different types (analysis, hypothesis, verification, conclusion) to the main path or any branch
-3. **update_step** - Modify the content, type, or metadata of an existing step
-4. **review_thinking** - Get complete thinking chain with quality assessment
-5. **branch_thinking** - Create alternative reasoning paths
-6. **merge_insights** - Combine insights from multiple branches
-7. **validate_logic** - Check reasoning for logical fallacies
-8. **export_session** - Export sessions to markdown, JSON, or text
-9. **list_sessions** - List all thinking sessions with filtering
-10. **delete_session** - Remove sessions
-11. **get_metrics** - Analytics on thinking patterns and quality
+## Quick Start
 
-### 📚 Resources
+### Prerequisites
 
-- `thinking://session/{session_id}` - Access individual sessions
-- `thinking://sessions/list` - Browse all sessions
-- `thinking://template/{template_type}` - Pre-built frameworks:
-    - scientific-method
-    - five-whys
-    - decision-matrix
-    - swot-analysis
-    - pros-cons
-    - first-principles
-    - fishbone
-    - pareto-analysis
+- Go 1.24 or newer
+- Git (or another way to obtain the source)
 
-### 💬 Prompts
-
-1. **problem_breakdown** - Guide for decomposing complex problems
-2. **critical_analysis** - Framework for evaluating arguments
-3. **synthesis_prompt** - Template for combining multiple insights
-
-### ✨ Advanced Features
-
-- **Quality Scoring**: Automatic assessment of reasoning quality
-- **Pattern Detection**: Identifies common thinking patterns
-- **Logical Validation**: Detects fallacies and weak reasoning
-- **Branching**: Explore multiple solution approaches
-- **Step Editing**: Update existing reasoning without starting over
-- **Metrics & Analytics**: Track thinking effectiveness over time
-- **Multiple Export Formats**: Markdown, JSON, and plain text
-- **Completion Support**: Auto-complete session IDs and prompts
-- **Real-time Logging**: Monitor thinking progress
-
-## Installation
+### Build and Run (stdio transport)
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd sequential-thinking-mcp
-
-# Install dependencies
 go mod download
-
-# Build
-go build -o sequential-thinking-server
-
-# Run
-./sequential-thinking-server
+go build -o sequentialthinking ./cmd/sequentialthinking
+./sequentialthinking
 ```
 
-## Usage
+The binary listens on stdio and is ready to be launched by MCP-aware clients.
 
-### With MCP Inspector
+### Run as HTTP server
 
 ```bash
-# Install MCP Inspector
-npm install -g @modelcontextprotocol/inspector
-
-# Run server with inspector
-mcp-inspector sequential-thinking-server
+./sequentialthinking -http :8080
 ```
 
-### With Claude Desktop
+The `-http` flag enables streamable HTTP transport on the supplied address.
 
-Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+### Docker
 
-```json
-{
-  "mcpServers": {
-    "sequential-thinking": {
-      "command": "/path/to/sequential-thinking-server"
+```bash
+docker build -t sequentialthinking .
+docker run --rm sequentialthinking
+```
+
+The multi-stage Dockerfile builds a static binary and runs it from a scratch image (UID 65532).
+
+## Integrating with MCP Clients
+
+- **MCP Inspector**
+  ```bash
+  npm install -g @modelcontextprotocol/inspector
+  mcp-inspector ./sequentialthinking
+  ```
+- **Claude Desktop (macOS path shown)**
+  ```json
+  {
+    "mcpServers": {
+      "sequentialthinking": {
+        "command": "/absolute/path/to/sequentialthinking"
+      }
     }
   }
-}
+  ```
+
+## Tooling Surface
+
+| Tool | Purpose | Notable Arguments |
+| --- | --- | --- |
+| `start_thinking` | Create a new session with initial analysis and suggested next steps. | `problem`, optional `context`, optional `tags` |
+| `add_step` | Append a reasoning step to the main flow or a branch. | `session_id`, optional `branch_id`, `step_type`, `step_content` |
+| `update_step` | Edit an existing step’s content, type, or metadata. | `session_id`, `step_number`, optional fields to update |
+| `review_thinking` | Retrieve the full chain, connections, patterns, and summary. | `session_id`, optional `format` (`linear`, `tree`, `summary`) |
+| `branch_thinking` | Fork the reasoning path from an existing step and seed a branch. | `session_id`, `from_step`, `alternative_reasoning` |
+| `merge_insights` | Synthesize conclusions across multiple branches. | `session_id`, `branch_ids` |
+| `validate_logic` | Flag logical issues and describe strengths. | `session_id`, optional `range_start`, `range_end` |
+| `export_session` | Export a session as markdown, JSON, or plain text. | `session_id`, optional `include_branches`, `format` |
+| `list_sessions` | Filterable session directory with quality scores. | optional `status`, `tags`, `limit` |
+| `delete_session` | Remove a session. | `session_id` |
+| `get_metrics` | Aggregate reasoning metrics across sessions. | optional `time_range` (`day`, `week`, `month`, `all`) |
+
+## Resources and Prompts
+
+- **Resources**
+  - `thinking://session/{session_id}` – JSON snapshot of a single session.
+  - `thinking://sessions/list` – JSON list of all sessions in memory.
+  - `thinking://template/{template_type}` – JSON representation of thinking frameworks (`scientific-method`, `five-whys`, `decision-matrix`, `swot-analysis`, `pros-cons`, `first-principles`, `fishbone`, `pareto-analysis`).
+
+- **Prompts**
+  - `problem_breakdown` – Structures complex problem decomposition.
+  - `critical_analysis` – Guides evaluation of claims and evidence.
+  - `synthesis_prompt` – Helps combine multiple insights into coherent output.
+
+## Reasoning Model Highlights
+
+- **Step Types**: `analysis`, `hypothesis`, `verification`, `conclusion`. Parent references and connection tracking let clients build reasoning graphs.
+- **Branching**: Any step can branch into alternative reasoning paths. Branch steps are numbered locally and remain tied to the originating step.
+- **Quality Scoring**: Heuristic combines step-type diversity (30%), connection density (30%), and depth (40%). Scores stay in `[0,1]` and recompute after each update.
+- **Logical Validation**: Detects unsupported conclusions and unverified hypotheses. Returns structured issues, suggestions, strength highlights, and an overall validity score.
+- **Pattern Detection**: Identifies recurring reasoning patterns (hypothesis-verification, progressive refinement, branching synthesis) for analytics.
+- **Exports**: Markdown, JSON, and text exporters include metadata, connections, branches, and suggested filenames.
+
+## Operational Notes
+
+- **Storage**: In-memory (`internal/thinking.MemoryStore`) guarded by RW mutexes. Sessions are ephemeral and cleared on restart.
+- **Concurrency**: Reads return deep clones to prevent external mutation; writes update timestamps, current step counters, and quality scores.
+- **Logging**: Uses `log/slog` for initialization messages and `mcp.LoggingTransport` for stdio diagnostics.
+- **Completion Support**: Autocomplete handler surfaces session IDs and template names for MCP completion requests.
+
+## Development Workflow
+
+```bash
+# Run unit and integration tests
+go test ./...
+
+# Format and lint
+go fmt ./...
+golangci-lint run    # optional, if installed
 ```
 
-### Example Workflow
-
-```javascript
-// 1. Start a thinking session
-{
-  "tool": "start_thinking",
-  "arguments": {
-    "problem": "How can we reduce API latency?",
-    "tags": ["performance", "architecture"]
-  }
-}
-
-// 2. Add analysis steps
-{
-  "tool": "add_step",
-  "arguments": {
-    "session_id": "<session_id>",
-    "step_content": "Current average latency is 250ms, with p95 at 800ms",
-    "step_type": "analysis"
-  }
-}
-
-// 3. Form hypothesis
-{
-  "tool": "add_step",
-  "arguments": {
-    "session_id": "<session_id>",
-    "step_content": "Database queries are the primary bottleneck",
-    "step_type": "hypothesis"
-  }
-}
-
-// 4. Create alternative branch
-{
-  "tool": "branch_thinking",
-  "arguments": {
-    "session_id": "<session_id>",
-    "from_step": 2,
-    "alternative_reasoning": "Network latency might be the main issue"
-  }
-}
-
-// 5. Validate logic
-{
-  "tool": "validate_logic",
-  "arguments": {
-    "session_id": "<session_id>"
-  }
-}
-
-// 6. Review complete thinking
-{
-  "tool": "review_thinking",
-  "arguments": {
-    "session_id": "<session_id>",
-    "format": "tree"
-  }
-}
-
-// 7. Export session
-{
-  "tool": "export_session",
-  "arguments": {
-    "session_id": "<session_id>",
-    "format": "markdown",
-    "include_branches": true
-  }
-}
-```
-
-## Step Types
-
-- **analysis**: Breaking down and examining the problem
-- **hypothesis**: Forming testable explanations
-- **verification**: Testing and validating hypotheses
-- **conclusion**: Drawing final insights and decisions
-
-## Templates
-
-Access thinking frameworks via resources:
-
-```javascript
-{
-  "resource": "thinking://template/scientific-method"
-}
-```
-
-Available templates guide you through proven problem-solving approaches:
-- **Scientific Method**: Systematic hypothesis testing
-- **Five Whys**: Root cause analysis
-- **Decision Matrix**: Weighted option comparison
-- **SWOT**: Strengths, Weaknesses, Opportunities, Threats
-- **First Principles**: Reasoning from fundamental truths
-- **Fishbone**: Cause-effect analysis
-- **Pareto**: 80/20 prioritization
-
-## Metrics
-
-Track your thinking effectiveness:
-
-```javascript
-{
-  "tool": "get_metrics",
-  "arguments": {
-    "time_range": "week"  // day, week, month, or all
-  }
-}
-```
-
-Returns:
-- Total sessions and completion rate
-- Average steps per session
-- Quality score trends
-- Common patterns detected
-- Logical issue frequency
-- Step type distribution
-
-## Architecture
+### Project Layout
 
 ```
-sequential-thinking-server/
-├── main.go              # Entry point, server setup
-├── types.go             # Data structures
-├── store.go             # In-memory storage
-├── handlers.go          # Tool implementations
-├── export.go            # Export functionality
-├── resources.go         # Resource handlers
-├── prompts.go           # Prompt handlers
-├── go.mod               # Dependencies
-└── README.md            # Documentation
+cmd/sequentialthinking   CLI entry point and flag parsing
+internal/server          MCP server assembly, transports, integration tests
+internal/handlers        Tool, resource, prompt handlers and helper logic
+internal/thinking        Core domain types, in-memory store, exports, metrics
 ```
 
-## Storage
+### Release Tips
 
-Uses in-memory storage by default. Sessions are lost on restart. All operations are thread-safe using `sync.RWMutex`.
-
-## Error Handling
-
-All tools return structured errors. Sessions that don't exist return appropriate "not found" errors. Invalid inputs are validated before processing.
-
-## Quality Scoring
-
-Automatic quality assessment based on:
-- Variety of step types (30%)
-- Step connectivity (30%)
-- Reasoning depth (40%)
-
-Score ranges:
-- 0.8-1.0: Excellent reasoning
-- 0.6-0.8: Good reasoning
-- 0.4-0.6: Adequate reasoning
-- 0.0-0.4: Needs improvement
-
-## Logical Validation
-
-Detects common issues:
-- Unsupported conclusions
-- Unverified hypotheses
-- Weak connections
-- Missing evidence
-- Logical fallacies
+- Build with `CGO_ENABLED=0` for static binaries (already used in Dockerfile).
+- Bump the version in `internal/server.New` when publishing server changes.
+- Use the provided Dockerfile as the canonical container build.
 
 ## License
 
-MIT
-
-## Contributing
-
-Contributions welcome! Please open issues or pull requests.
-
-## Development
-
-```bash
-# Run tests
-go test ./...
-
-# Format code
-go fmt ./...
-
-# Lint
-golangci-lint run
-
-# Build for multiple platforms
-GOOS=linux GOARCH=amd64 go build -o sequential-thinking-linux
-GOOS=darwin GOARCH=arm64 go build -o sequential-thinking-mac
-GOOS=windows GOARCH=amd64 go build -o sequential-thinking.exe
-```
-
-## Future Enhancements
-
-- Persistent storage (SQLite, PostgreSQL)
-- Multi-user support with authentication
-- Real-time collaboration
-- AI-powered suggestion engine
-- Visual reasoning graphs
-- Import from other formats
-- Plugin system for custom validators
-- Web dashboard
-- API rate limiting
-- Session versioning
-- Automated quality suggestions
+MIT License (use repository root `LICENSE` if present).
