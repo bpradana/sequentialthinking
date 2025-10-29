@@ -35,7 +35,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/sequentialthinking:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/sequentialthinking:v${{ github.ref_name }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/sequentialthinking:${{ github.ref_name }}
             ${{ secrets.DOCKERHUB_USERNAME }}/sequentialthinking:${{ github.sha }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
