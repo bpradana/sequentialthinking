@@ -137,6 +137,20 @@ type StartThinkingOutput struct {
 	SuggestedSteps  []string `json:"suggested_steps" jsonschema:"Recommended next steps"`
 }
 
+type StartFromTemplateInput struct {
+	Template string         `json:"template" jsonschema:"The template identifier to initialize from,enum=scientific-method,enum=five-whys,enum=root-cause-analysis,enum=decision-matrix,enum=swot-analysis,enum=pros-cons,enum=five-principles,enum=fishbone,enum=pareto-analysis"`
+	Problem  string         `json:"problem,omitempty" jsonschema:"Optional problem statement overriding the template title"`
+	Context  map[string]any `json:"context,omitempty" jsonschema:"Optional background information"`
+	Tags     []string       `json:"tags,omitempty" jsonschema:"Tags to categorize the session"`
+}
+
+type StartFromTemplateOutput struct {
+	SessionID       string    `json:"session_id" jsonschema:"Unique identifier for the session"`
+	Template        *Template `json:"template" jsonschema:"Template metadata used to initialize the session"`
+	InitialAnalysis string    `json:"initial_analysis" jsonschema:"First thoughts generated for the session"`
+	SuggestedSteps  []string  `json:"suggested_steps" jsonschema:"Template-driven recommended next steps"`
+}
+
 type AddStepInput struct {
 	SessionID   string         `json:"session_id" jsonschema:"The session to add to"`
 	BranchID    string         `json:"branch_id,omitempty" jsonschema:"Branch identifier if adding to a branch"`

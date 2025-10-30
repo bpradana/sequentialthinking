@@ -37,6 +37,23 @@ var templates = map[string]*thinking.Template{
 		WhenToUse: "When you need to find the root cause of a problem",
 		Example:   "Problem: Server crashed. Why? Out of memory. Why? Memory leak. Why? Unclosed connections. Why? Missing cleanup code. Why? Developer unfamiliar with cleanup requirements.",
 	},
+	"root-cause-analysis": {
+		Type:        "root-cause-analysis",
+		Name:        "Root Cause Analysis",
+		Description: "Structured process to identify underlying causes of issues and prevent recurrence",
+		Steps: []string{
+			"Clearly define the problem and its impact",
+			"Collect data and evidence about when and how the issue occurs",
+			"Identify all possible contributing factors across people, process, and technology",
+			"Analyze causal chains to isolate the most likely root causes",
+			"Validate root causes with data or experiments",
+			"Develop corrective actions that address the confirmed root causes",
+			"Implement the corrective plan with owners and timelines",
+			"Monitor outcomes to ensure the problem is resolved",
+		},
+		WhenToUse: "When an issue reoccurs or has significant impact and you must prevent it from happening again",
+		Example:   "Recurring production incidents traced to inconsistent deployment procedures; corrective actions include automated checks and updated runbooks.",
+	},
 	"decision-matrix": {
 		Type:        "decision-matrix",
 		Name:        "Decision Matrix",

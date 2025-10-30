@@ -41,6 +41,49 @@ func TestCreateStartThinkingHandler(t *testing.T) {
 	}
 }
 
+func TestCreateStartFromTemplateHandler(t *testing.T) {
+	t.Parallel()
+
+	store := thinking.NewMemoryStore()
+	handler := createStartFromTemplateHandler(store)
+
+	_, out, err := handler(context.Background(), &mcp.CallToolRequest{}, thinking.StartFromTemplateInput{
+		Template: "five-whys",
+		Problem:  "Investigate outage recurrence",
+		Tags:     []string{"incident"},
+	})
+	if err != nil {
+		t.Fatalf("handler returned error: %v", err)
+	}
+	if out.SessionID == "" {
+		t.Fatalf("expected session ID to be generated")
+	}
+	if out.Template == nil || out.Template.Type != "five-whys" {
+		t.Fatalf("expected template metadata for five-whys, got %+v", out.Template)
+	}
+	if len(out.SuggestedSteps) != len(out.Template.Steps) {
+		t.Fatalf("expected suggested steps to mirror template steps")
+	}
+	if !strings.Contains(out.InitialAnalysis, "Investigate outage recurrence") {
+		t.Fatalf("expected initial analysis to reference problem; got %q", out.InitialAnalysis)
+	}
+
+	sessions := store.ListSessions()
+	if len(sessions) != 1 || sessions[0].ID != out.SessionID {
+		t.Fatalf("expected store to contain created session, got %v", sessions)
+	}
+	if sessions[0].Context["template_type"] != "five-whys" {
+		t.Fatalf("expected session context to include template metadata, got %+v", sessions[0].Context)
+	}
+
+	_, _, err = handler(context.Background(), &mcp.CallToolRequest{}, thinking.StartFromTemplateInput{
+		Template: "unknown-template",
+	})
+	if err == nil {
+		t.Fatalf("expected error for unknown template")
+	}
+}
+
 func TestCreateAddStepHandlerMainAndBranch(t *testing.T) {
 	t.Parallel()
 
