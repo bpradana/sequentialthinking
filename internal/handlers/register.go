@@ -16,11 +16,6 @@ func RegisterTools(server *mcp.Server, store *thinking.MemoryStore) {
 	}, createStartThinkingHandler(store))
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "start_from_template",
-		Description: "Initiate a new thinking session using a predefined thinking template",
-	}, createStartFromTemplateHandler(store))
-
-	mcp.AddTool(server, &mcp.Tool{
 		Name:        "add_step",
 		Description: "Add a reasoning step to an existing thinking session",
 	}, createAddStepHandler(store))

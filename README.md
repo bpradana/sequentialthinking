@@ -107,8 +107,7 @@ The server responds with the new `session_id`, populated steps from the requeste
 
 | Tool                  | Purpose                                                              | Notable Arguments                                                   |
 |-----------------------|----------------------------------------------------------------------|---------------------------------------------------------------------|
-| `start_thinking`      | Create a new session with initial analysis and suggested next steps. | `problem`, optional `context`, optional `tags`                      |
-| `start_from_template` | Create a session seeded with a predefined thinking template.         | `template`, optional `problem`, optional `context`, optional `tags` |
+| `start_thinking`      | Create a new session with initial analysis and suggested next steps. | `problem`, optional `context`, optional `tags`, optional `template` |
 | `add_step`            | Append a reasoning step to the main flow or a branch.                | `session_id`, optional `branch_id`, `step_type`, `step_content`     |
 | `update_step`         | Edit an existing step’s content, type, or metadata.                  | `session_id`, `step_number`, optional fields to update              |
 | `review_thinking`     | Retrieve the full chain, connections, patterns, and summary.         | `session_id`, optional `format` (`linear`, `tree`, `summary`)       |

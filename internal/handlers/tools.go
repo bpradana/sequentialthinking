@@ -13,9 +13,15 @@ import (
 // Tool handler: start_thinking
 func createStartThinkingHandler(store *thinking.MemoryStore) func(context.Context, *mcp.CallToolRequest, thinking.StartThinkingInput) (*mcp.CallToolResult, thinking.StartThinkingOutput, error) {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input thinking.StartThinkingInput) (*mcp.CallToolResult, thinking.StartThinkingOutput, error) {
-		session, err := store.CreateSession(input.Problem, input.Context, input.Tags)
-		if err != nil {
-			return nil, thinking.StartThinkingOutput{}, err
+		templateID := strings.TrimSpace(input.Template)
+		problem := strings.TrimSpace(input.Problem)
+
+		var contextMap map[string]any
+		if len(input.Context) > 0 {
+			contextMap = make(map[string]any, len(input.Context))
+			for k, v := range input.Context {
+				contextMap[k] = v
+			}
 		}
 
 		suggestedSteps := []string{
@@ -25,54 +31,32 @@ func createStartThinkingHandler(store *thinking.MemoryStore) func(context.Contex
 			"Gather relevant information or evidence",
 		}
 
-		output := thinking.StartThinkingOutput{
-			SessionID:       session.ID,
-			InitialAnalysis: session.InitialAnalysis,
-			SuggestedSteps:  suggestedSteps,
-		}
+		var templateData *thinking.Template
+		if templateID != "" {
+			templateData = getTemplate(templateID)
+			if templateData == nil {
+				return nil, thinking.StartThinkingOutput{}, fmt.Errorf("template %q not found", templateID)
+			}
 
-		return nil, output, nil
-	}
-}
+			if contextMap == nil {
+				contextMap = make(map[string]any, len(input.Context)+2)
+			}
+			contextMap["template_type"] = templateData.Type
+			contextMap["template_name"] = templateData.Name
 
-// Tool handler: start_from_template
-func createStartFromTemplateHandler(store *thinking.MemoryStore) func(context.Context, *mcp.CallToolRequest, thinking.StartFromTemplateInput) (*mcp.CallToolResult, thinking.StartFromTemplateOutput, error) {
-	return func(ctx context.Context, req *mcp.CallToolRequest, input thinking.StartFromTemplateInput) (*mcp.CallToolResult, thinking.StartFromTemplateOutput, error) {
-		templateID := strings.TrimSpace(input.Template)
-		if templateID == "" {
-			return nil, thinking.StartFromTemplateOutput{}, fmt.Errorf("template is required")
-		}
-
-		template := getTemplate(templateID)
-		if template == nil {
-			return nil, thinking.StartFromTemplateOutput{}, fmt.Errorf("template %q not found", templateID)
-		}
-
-		contextMap := make(map[string]any)
-		for k, v := range input.Context {
-			contextMap[k] = v
-		}
-		contextMap["template_type"] = template.Type
-		contextMap["template_name"] = template.Name
-
-		problem := strings.TrimSpace(input.Problem)
-		if problem == "" {
-			problem = fmt.Sprintf("%s Template Session", template.Name)
+			suggestedSteps = make([]string, len(templateData.Steps))
+			copy(suggestedSteps, templateData.Steps)
 		}
 
 		session, err := store.CreateSession(problem, contextMap, input.Tags)
 		if err != nil {
-			return nil, thinking.StartFromTemplateOutput{}, err
+			return nil, thinking.StartThinkingOutput{}, err
 		}
 
-		suggested := make([]string, len(template.Steps))
-		copy(suggested, template.Steps)
-
-		output := thinking.StartFromTemplateOutput{
+		output := thinking.StartThinkingOutput{
 			SessionID:       session.ID,
-			Template:        template,
 			InitialAnalysis: session.InitialAnalysis,
-			SuggestedSteps:  suggested,
+			SuggestedSteps:  suggestedSteps,
 		}
 
 		return nil, output, nil

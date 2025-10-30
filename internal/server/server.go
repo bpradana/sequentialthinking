@@ -18,7 +18,8 @@ func New(store *thinking.MemoryStore) *mcp.Server {
 	srv := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "sequential-thinking",
-			Version: "1.0.0",
+			Title:   "Sequential Thinking",
+			Version: "1.2.0",
 		},
 		&mcp.ServerOptions{
 			CompletionHandler: handlers.CompletionHandler(store),
