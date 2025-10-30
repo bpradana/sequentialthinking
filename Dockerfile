@@ -5,6 +5,9 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Compression tool for the final binary
+RUN apk add --no-cache upx
+
 # Build
 COPY . .
 ARG TARGETOS
@@ -15,6 +18,7 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH \
       -trimpath \
       -ldflags '-s -w -extldflags "-static"' \
       -o /out/app ./cmd/sequentialthinking/main.go
+RUN upx --best --lzma -9 /out/app && upx -t /out/app
 
 FROM scratch
 # Binary
