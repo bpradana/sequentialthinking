@@ -1,5 +1,10 @@
 # Sequential Thinking MCP Server
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/bpradana/sequentialthinking)](https://goreportcard.com/report/github.com/bpradana/sequentialthinking)
+[![Release](https://img.shields.io/github/v/release/bpradana/sequentialthinking.svg)](https://github.com/bpradana/sequentialthinking/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Docker Pulls](https://img.shields.io/docker/pulls/bpradana/sequentialthinking.svg)](https://hub.docker.com/r/bpradana/sequentialthinking)
+
 Sequential Thinking is a Model Context Protocol (MCP) server that operationalizes deliberate reasoning. It lets MCP clients create structured thinking sessions, capture sequential steps (analysis → hypothesis → verification → conclusion), branch into alternative lines of thought, and export or audit the full chain of reasoning.
 
 ## Overview
